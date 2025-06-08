@@ -1,0 +1,25 @@
+.dashboard-card {
+  max-height: 350px;
+}
+
+.dashboard-card-body {
+  max-height: 300px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.dashboard-profit-expense-graph {
+  width: 180px;
+  height: 180px;
+  margin-top: 20px;
+}
+
+.dashboard-profit-expense-row {
+  font-size: 14px;
+  width: 100%;
+  margin-top: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+}
