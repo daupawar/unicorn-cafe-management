@@ -38,7 +38,7 @@ const BranchManagement = () => {
 
   const fetchBranches = async () => {
     try {
-      const res = await axiosInstance.get('http://localhost:5000/api/branches', {
+      const res = await axiosInstance.get('https://unicorn-cafe-management.onrender.com/api/branches', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setBranches(res.data);
@@ -64,14 +64,14 @@ const BranchManagement = () => {
       let response;
       if (editingId) {
         response = await axiosInstance.put(
-          `http://localhost:5000/api/branches/${editingId}`,
+          `https://unicorn-cafe-management.onrender.com/api/branches/${editingId}`,
           form,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setCredentials(null); // Don't show credentials on edit
       } else {
         response = await axiosInstance.post(
-          'http://localhost:5000/api/branches',
+          'https://unicorn-cafe-management.onrender.com/api/branches',
           form,
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -99,7 +99,7 @@ const BranchManagement = () => {
     if (!id) return;
     if (!window.confirm('Delete this branch?')) return;
     try {
-      await axiosInstance.delete(`http://localhost:5000/api/branches/${id}`, {
+      await axiosInstance.delete(`https://unicorn-cafe-management.onrender.com/api/branches/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       fetchBranches();
@@ -117,7 +117,7 @@ const BranchManagement = () => {
 
   return (
     <div style={{ maxWidth: 700, margin: '40px auto', padding: 24 }}>
-      <h2>Branch Management</h2>
+      <h2>Branch Management ffdsf</h2>
       <form onSubmit={handleSubmit} style={{ marginBottom: 24, border: '1px solid #eee', borderRadius: 8, padding: 16 }}>
         <input name="name" placeholder="Branch Name" value={form.name} onChange={handleChange} required style={{ width: '100%', marginBottom: 8, padding: 8 }} />
         <input name="location" placeholder="Location" value={form.location} onChange={handleChange} required style={{ width: '100%', marginBottom: 8, padding: 8 }} />
