@@ -8,7 +8,6 @@ const app = express();
 app.use(cors());
 app.use(express.json()); 
 
-const cors = require('cors');
 const allowedOrigins = [
   'https://unicorn-cafe-management.vercel.app', // your frontend domain
   'https://your-frontend-domain.com',           // add any other domains as needed
