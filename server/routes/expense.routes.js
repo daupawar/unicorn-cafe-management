@@ -121,8 +121,6 @@ router.post('/bulk-upload', upload.single('file'), async (req, res) => {
 
 require('dotenv').config(); // Add this at the top if not already
 
-  
-
 router.get('/by-date', async (req, res) => {
   try {
     let { day, month, year } = req.query;
@@ -152,16 +150,18 @@ router.get('/by-date', async (req, res) => {
       return res.status(400).json({ message: 'Provide at least one of day, month, or year.' });
     }
 
-    // Return reason, revenue, and expenses
-    const expenses = await Expense.find(query).sort({ date: 1 }).select('reason revenue expenses');
-    // Calculate total revenue
-    const totalRevenue = expenses.reduce((sum, exp) => sum + (exp.revenue || 0), 0);
+    // Only select date, amount, reason
+    const expenses = await Expense.find(query)
+      .sort({ date: 1 })
+      .select('date amount reason');
 
-    res.json({ expenses, totalRevenue });
+    // Calculate total amount
+    const totalAmount = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+
+    res.json({ expenses, totalAmount });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
-
  
 module.exports = router;

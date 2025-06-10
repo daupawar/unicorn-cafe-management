@@ -1,6 +1,20 @@
 import { useEffect, useState } from 'react';
 import axiosInstance from '../api/axiosInstance';
 import BranchList from '../components/BranchList';
+import {
+  Card,
+  Form,
+  Input,
+  Button,
+  DatePicker,
+  Checkbox,
+  message,
+  Typography,
+  Space,Row, Col
+} from 'antd';
+import dayjs from 'dayjs';
+
+const { Title } = Typography;
 
 type Branch = {
   _id?: string;
@@ -29,7 +43,7 @@ const emptyBranch: Branch = {
 
 const BranchManagement = () => {
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [form, setForm] = useState<Branch>(emptyBranch);
+  const [form] = Form.useForm();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [credentials, setCredentials] = useState<{ username: string; password: string } | null>(null);
@@ -38,7 +52,7 @@ const BranchManagement = () => {
 
   const fetchBranches = async () => {
     try {
-      const res = await axiosInstance.get('https://unicorn-cafe-management.onrender.com/api/branches', {
+      const res = await axiosInstance.get('http://localhost:5000/api/branches', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setBranches(res.data);
@@ -52,27 +66,25 @@ const BranchManagement = () => {
     // eslint-disable-next-line
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type, checked } = e.target;
-    setForm({ ...form, [name]: type === 'checkbox' ? checked : value });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleFinish = async (values: any) => {
     setError('');
     try {
       let response;
+      const payload = {
+        ...values,
+        openingDate: values.openingDate ? values.openingDate.format('YYYY-MM-DD') : '',
+      };
       if (editingId) {
         response = await axiosInstance.put(
-          `https://unicorn-cafe-management.onrender.com/api/branches/${editingId}`,
-          form,
+          `http://localhost:5000/api/branches/${editingId}`,
+          payload,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setCredentials(null); // Don't show credentials on edit
       } else {
         response = await axiosInstance.post(
-          'https://unicorn-cafe-management.onrender.com/api/branches',
-          form,
+          'http://localhost:5000/api/branches',
+          payload,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         if (response.data && response.data.credentials) {
@@ -81,16 +93,20 @@ const BranchManagement = () => {
           setCredentials(null);
         }
       }
-      setForm(emptyBranch);
+      form.resetFields();
       setEditingId(null);
       fetchBranches();
+      message.success(editingId ? 'Branch updated!' : 'Branch added!');
     } catch (err: any) {
       setError(err?.response?.data?.error || 'Failed to save branch');
     }
   };
 
   const handleEdit = (branch: Branch) => {
-    setForm({ ...branch, openingDate: branch.openingDate?.slice(0, 10) });
+    form.setFieldsValue({
+      ...branch,
+      openingDate: branch.openingDate ? dayjs(branch.openingDate) : null,
+    });
     setEditingId(branch._id || null);
     setCredentials(null); // Hide credentials card on edit
   };
@@ -99,59 +115,148 @@ const BranchManagement = () => {
     if (!id) return;
     if (!window.confirm('Delete this branch?')) return;
     try {
-      await axiosInstance.delete(`https://unicorn-cafe-management.onrender.com/api/branches/${id}`, {
+      await axiosInstance.delete(`http://localhost:5000/api/branches/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       fetchBranches();
+      message.success('Branch deleted!');
     } catch {
       setError('Failed to delete branch');
     }
   };
 
   const handleCancel = () => {
-    setForm(emptyBranch);
+    form.resetFields();
     setEditingId(null);
     setError('');
     setCredentials(null); // Hide credentials card on cancel
   };
 
   return (
-    <div style={{ maxWidth: 700, margin: '40px auto', padding: 24 }}>
-      <h2>Branch Management ffdsf</h2>
-      <form onSubmit={handleSubmit} style={{ marginBottom: 24, border: '1px solid #eee', borderRadius: 8, padding: 16 }}>
-        <input name="name" placeholder="Branch Name" value={form.name} onChange={handleChange} required style={{ width: '100%', marginBottom: 8, padding: 8 }} />
-        <input name="location" placeholder="Location" value={form.location} onChange={handleChange} required style={{ width: '100%', marginBottom: 8, padding: 8 }} />
-        <input name="owner" placeholder="Owner" value={form.owner} onChange={handleChange} required style={{ width: '100%', marginBottom: 8, padding: 8 }} />
-        <input name="address" placeholder="Address" value={form.address} onChange={handleChange} required style={{ width: '100%', marginBottom: 8, padding: 8 }} />
-        <input name="email" type="email" placeholder="Email" value={form.email} onChange={handleChange} required style={{ width: '100%', marginBottom: 8, padding: 8 }} />
-        <input name="openingDate" type="date" value={form.openingDate} onChange={handleChange} required style={{ width: '100%', marginBottom: 8, padding: 8 }} />
-        <label>
-          <input name="isActive" type="checkbox" checked={form.isActive} onChange={handleChange} style={{ marginRight: 8 }} />
-          Active
-        </label>
-        <textarea name="comment" placeholder="Comment" value={form.comment} onChange={handleChange} style={{ width: '100%', marginBottom: 8, padding: 8 }} />
-        <div>
-          <button type="submit" style={{ marginRight: 8 }}>{editingId ? 'Update' : 'Add'} Branch</button>
-          {editingId && <button type="button" onClick={handleCancel}>Cancel</button>}
-        </div>
-        {error && <div style={{ color: 'red', marginTop: 10 }}>{error}</div>}
-      </form>
-
-      {credentials && (
-        <div style={{
-          border: '2px solid #4caf50',
-          borderRadius: 8,
-          padding: 16,
-          margin: '16px 0',
-          background: '#f6fff6'
-        }}>
-          <h3>Branch Credentials</h3>
-          <div><b>Username:</b> {credentials.username}</div>
-          <div><b>Password:</b> {credentials.password}</div>
-        </div>
+    <div style={{ maxWidth: 1200, margin: '40px auto', width: '100%', paddingBottom: 90 }}>
+      <Card style={{ marginBottom: 24 }}>
+        <Title level={5} style={{ marginBottom: 16 }}>
+          {editingId ? 'Edit Branch' : 'Add Branch'}
+        </Title>
+     <Form
+  form={form}
+  layout="vertical"
+  initialValues={{ ...emptyBranch, isActive: true }}
+  onFinish={handleFinish}
+>
+  <Row gutter={16}>
+    <Col xs={24} md={8}>
+      <Form.Item
+        label="Branch Name"
+        name="name"
+        rules={[{ required: true, message: 'Please enter branch name' }]}
+      >
+        <Input placeholder="Branch Name" />
+      </Form.Item>
+    </Col>
+    <Col xs={24} md={8}>
+      <Form.Item
+        label="Location"
+        name="location"
+        rules={[{ required: true, message: 'Please enter location' }]}
+      >
+        <Input placeholder="Location" />
+      </Form.Item>
+    </Col>
+    <Col xs={24} md={8}>
+      <Form.Item
+        label="Owner"
+        name="owner"
+        rules={[{ required: true, message: 'Please enter owner' }]}
+      >
+        <Input placeholder="Owner" />
+      </Form.Item>
+    </Col>
+  </Row>
+  <Row gutter={16}>
+    <Col xs={24} md={8}>
+      <Form.Item
+        label="Address"
+        name="address"
+        rules={[{ required: true, message: 'Please enter address' }]}
+      >
+        <Input placeholder="Address" />
+      </Form.Item>
+    </Col>
+    <Col xs={24} md={8}>
+      <Form.Item
+        label="Email"
+        name="email"
+        rules={[
+          { required: true, message: 'Please enter email' },
+          { type: 'email', message: 'Please enter a valid email' },
+        ]}
+      >
+        <Input placeholder="Email" />
+      </Form.Item>
+    </Col>
+    <Col xs={24} md={8}>
+      <Form.Item
+        label="Comment"
+        name="comment"
+      >
+        <Input.TextArea placeholder="Comment" rows={1} />
+      </Form.Item>
+    </Col>
+  </Row>
+ <Row gutter={16}>
+  <Col xs={24} md={8}>
+    <Form.Item
+      label="Opening Date"
+      name="openingDate"
+      rules={[{ required: true, message: 'Please select opening date' }]}
+    >
+      <DatePicker style={{ width: '100%' }} />
+    </Form.Item>
+  </Col>
+  <Col xs={24} md={8} style={{ display: 'flex', alignItems: 'center' }}>
+    <Form.Item
+      name="isActive"
+      valuePropName="checked"
+      style={{ width: '100%', marginBottom: 0 }}
+    >
+      <Checkbox>Active</Checkbox>
+    </Form.Item>
+  </Col>
+  <Col xs={24} md={8} />
+</Row>
+  <Form.Item>
+    <Space>
+      <Button type="primary" htmlType="submit" style={{ marginTop: 20 }}>
+        {editingId ? 'Update' : 'Add'} Branch
+      </Button>
+      {editingId && (
+        <Button  style={{ marginTop: 20 }} onClick={handleCancel}>Cancel</Button>
       )}
+    </Space>
+  </Form.Item>
+  {error && <div style={{ color: 'red', marginTop: 10 }}>{error}</div>}
+</Form>
 
-      <BranchList branches={branches} onEdit={handleEdit} onDelete={handleDelete} />
+        {credentials && (
+          <Card
+            size="small"
+            style={{
+              border: '2px solid #4caf50',
+              borderRadius: 8,
+              margin: '16px 0',
+              background: '#f6fff6'
+            }}
+            title="Branch Credentials"
+          >
+            <div><b>Username:</b> {credentials.username}</div>
+            <div><b>Password:</b> {credentials.password}</div>
+          </Card>
+        )}
+      </Card>
+      <Card>
+        <BranchList branches={branches} onEdit={handleEdit} onDelete={handleDelete} />
+      </Card>
     </div>
   );
 };

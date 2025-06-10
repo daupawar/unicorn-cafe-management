@@ -30,7 +30,7 @@ const BranchListPage = () => {
   }, []);
 
   return (
-    <div style={{ maxWidth: 700, margin: '40px auto', padding: 24 }}>
+    <div style={{ margin: '40px auto', padding: 24 }}>
       <h2>Branch List</h2>
       {error && <div style={{ color: 'red' }}>{error}</div>}
       <BranchList branches={branches} />

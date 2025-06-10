@@ -1,6 +1,7 @@
 import { Suspense, lazy } from 'react';
 import { Navigate } from 'react-router-dom';
 import ProtectedRoute from '../shared/ProtectedRoute';
+import Profile from '../pages/profile/Profile';
 const BranchListPage = lazy(() => import('../pages/BranchListPage'));
 const ExpenseRevenueParent = lazy(() => import('../pages/ExpenseRevenueParent/ExpenseRevenueParent'));
 
@@ -81,6 +82,16 @@ export const routes = [
       </ProtectedRoute>
     ),
   },
+  {
+  path: '/profile',
+  element: (
+    <RequireAuth>
+      <Suspense fallback={<div>Loading...</div>}>
+        <Profile />
+      </Suspense>
+    </RequireAuth>
+  ),
+},
   {
     path: '*',
     element: <div>404 Not Found</div>,

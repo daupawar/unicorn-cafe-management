@@ -9,8 +9,7 @@ app.use(cors());
 app.use(express.json()); 
 
 const allowedOrigins = [
-  'https://unicorn-cafe-management.vercel.app', // your frontend domain
-  'https://your-frontend-domain.com',           // add any other domains as needed
+  'http://localhost:5173/', // your frontend domain
 ];
 
 app.use(cors({
@@ -30,6 +29,6 @@ app.use('/api/branches', require('./routes/branch.routes'));
  
 const revenueRoutes = require('./routes/revenue.routes');
 app.use('/api/revenue', revenueRoutes);
-
+app.use('/api/stats', require('./routes/user.routes'));
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

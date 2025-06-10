@@ -23,3 +23,22 @@
   display: flex;
   justify-content: space-between;
 }
+.dashboard-profit-expense-graph {
+  height: 300px;
+  margin: 20px 0;
+}
+
+.ant-card {
+  height: 100%;
+}
+
+.ant-statistic {
+  text-align: center;
+  margin: 16px 0;
+}
+
+.ant-list-item {
+  justify-content: space-between;
+}
+
+ 

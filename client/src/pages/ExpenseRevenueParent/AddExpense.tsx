@@ -1,12 +1,28 @@
 import { useState, useEffect, useRef } from 'react';
 import axiosInstance from '../../api/axiosInstance';
 import ViewExpenses from '../../components/ViewExpenses';
+import {
+  Form,
+  Input,
+  Button,
+  DatePicker,
+  Select,
+  message,
+  Card,
+  Space,
+  Typography,
+  Row,
+  Col,
+} from 'antd';
+import dayjs from 'dayjs';
+
+const { Option } = Select;
+const { Title } = Typography;
 
 type Expense = {
   _id?: string;
   date: string;
-  revenue: number;
-  expenses: number;
+  amount: number;
   reason?: string;
 };
 
@@ -24,7 +40,7 @@ const ITEM_NAMES = [
   "kokam",
   "ebill",
   "disposal material",
-  "bhakarwadi",
+  "bhakarvadi",
   "bailley",
   "lemon cup",
   "gas",
@@ -35,61 +51,71 @@ const ITEM_NAMES = [
 ];
 
 const AddExpense = () => {
-  const [form, setForm] = useState<Expense>({ date: '', revenue: 0, expenses: 0, reason: '' });
+  const [form] = Form.useForm();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const amountInputRef = useRef<Input | null>(null);
 
   const fetchExpenses = async () => {
     try {
       const res = await axiosInstance.get('/expenses');
       setExpenses(res.data);
     } catch {
-      setError('Failed to fetch expenses');
+      message.error('Failed to fetch expenses');
     }
   };
 
   useEffect(() => {
     fetchExpenses();
+    // Set today's date as default selected
+    form.setFieldsValue({ date: dayjs() });
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.type === 'number' ? Number(e.target.value) : e.target.value });
-  };
+  // Focus amount field when tab is selected (if used in a tab context)
+  useEffect(() => {
+    const tabBtns = document.querySelectorAll('.ant-tabs-tab');
+    const focusAmount = () => setTimeout(() => amountInputRef.current?.focus(), 100);
+    tabBtns.forEach(btn => btn.addEventListener('click', focusAmount));
+    return () => {
+      tabBtns.forEach(btn => btn.removeEventListener('click', focusAmount));
+    };
+  }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
+  const handleFinish = async (values: any) => {
+    setLoading(true);
     try {
+      const payload = {
+        ...values,
+        date: values.date ? values.date.format('YYYY-MM-DD') : '',
+      };
       if (editingId) {
-        await axiosInstance.put(`/expenses/${editingId}`, form);
-        setSuccess('Expense updated!');
+        await axiosInstance.put(`/expenses/${editingId}`, payload);
+        message.success('Expense updated!');
       } else {
-        await axiosInstance.post('/expenses', form);
-        setSuccess('Expense added!');
+        await axiosInstance.post('/expenses', payload);
+        message.success('Expense added!');
       }
-      setForm({ date: '', revenue: 0, expenses: 0, reason: '' });
+      form.resetFields();
       setEditingId(null);
-      fetchExpenses();
+      // Reset today's date after reset
+      form.setFieldsValue({ date: dayjs() });
+    fetchExpenses();
     } catch {
-      setError('Failed to save expense');
+      message.error('Failed to save expense');
     }
+    setLoading(false);
   };
 
   const handleEdit = (expense: Expense) => {
-    setForm({
-      _id: expense._id,
-      date: expense.date?.slice(0, 10),
-      revenue: expense.revenue,
-      expenses: expense.expenses,
+    form.setFieldsValue({
+      date: expense.date ? dayjs(expense.date) : null,
+      amount: expense.amount,
       reason: expense.reason || '',
     });
     setEditingId(expense._id || null);
-    setError('');
-    setSuccess('');
+    setTimeout(() => amountInputRef.current?.focus(), 100);
   };
 
   const handleDelete = async (id?: string) => {
@@ -98,8 +124,9 @@ const AddExpense = () => {
     try {
       await axiosInstance.delete(`/expenses/${id}`);
       fetchExpenses();
+      message.success('Expense deleted!');
     } catch {
-      setError('Failed to delete expense');
+      message.error('Failed to delete expense');
     }
   };
 
@@ -113,102 +140,118 @@ const AddExpense = () => {
     if (!file) return;
     const formData = new FormData();
     formData.append('file', file);
-    setError('');
-    setSuccess('');
     try {
       await axiosInstance.post('/expenses/bulk-upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      setSuccess('Bulk upload successful!');
+      message.success('Bulk upload successful!');
       fetchExpenses();
     } catch {
-      setError('Bulk upload failed!');
+      message.error('Bulk upload failed!');
     }
     e.target.value = '';
   };
 
   return (
-    <div>
-      <form onSubmit={handleSubmit} style={{ maxWidth: 400, margin: '40px auto', padding: 24, border: '1px solid #eee', borderRadius: 8 }}>
-        <h2>{editingId ? 'Edit Expense' : 'Add Expense'}</h2>
-        <div className="mb-3">
-          <label htmlFor="expense-date" className="form-label">Date</label>
-          <input
-            id="expense-date"
-            name="date"
-            type="date"
-            value={form.date}
-            onChange={handleChange}
-            required
-            className="form-control"
-            style={{ marginBottom: 12, padding: 8 }}
-          />
-        </div>
-        <div className="mb-3">
-          <label htmlFor="expense-amount" className="form-label">Expenses</label>
-          <input
-            id="expense-amount"
-            name="expenses"
-            type="number"
-            placeholder="Expenses"
-            value={form.expenses}
-            onChange={handleChange}
-            required
-            className="form-control"
-            style={{ marginBottom: 12, padding: 8 }}
-          />
-        </div>
-        <div className="mb-3">
-          <label htmlFor="expense-reason" className="form-label">Reason for Expenses</label>
-          <select
-            id="expense-reason"
-            name="reason"
-            value={form.reason}
-            onChange={handleChange}
-            className="form-control"
-            style={{ marginBottom: 12, padding: 8 }}
-            required
-          >
-            <option value="">Select Reason</option>
-            {ITEM_NAMES.map(item => (
-              <option key={item} value={item}>{item}</option>
-            ))}
-          </select>
-        </div>
-        <button type="submit" style={{ width: '100%', padding: 10 }}>{editingId ? 'Update' : 'Add'} Expense</button>
-        {editingId && (
-          <button
-            type="button"
-            onClick={() => { setForm({ date: '', revenue: 0, expenses: 0, reason: '' }); setEditingId(null); }}
-            style={{ width: '100%', padding: 10, marginTop: 8 }}
-          >
-            Cancel
-          </button>
-        )}
-        {/* Bulk Upload Button */}
-        <button
-          type="button"
-          onClick={handleBulkUploadClick}
-          style={{ width: '100%', padding: 10, marginTop: 8, background: '#388e3c', color: '#fff', border: 'none', borderRadius: 4 }}
-        >
-          Bulk Upload (Excel)
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".xls,.xlsx"
-          style={{ display: 'none' }}
-          onChange={handleBulkFileChange}
-        />
-        {error && <div style={{ color: 'red', marginTop: 10 }}>{error}</div>}
-        {success && <div style={{ color: 'green', marginTop: 10 }}>{success}</div>}
-      </form>
-
-      <ViewExpenses
-        expenses={expenses}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-      />
+    <div style={{ maxWidth: 1200, margin: '40px auto', width: '100%', paddingBottom: 90 }}>
+      <Row gutter={[24, 24]}>
+        <Col xs={24} md={10}>
+          <Card>
+            <Title level={5} style={{ marginBottom: 16 }}>
+              {editingId ? 'Edit Expense' : 'Add Expense'}
+            </Title>
+            <Form
+              form={form}
+              layout="vertical"
+              onFinish={handleFinish}
+              initialValues={{ amount: null, reason: '', date: dayjs() }}
+            >
+              <Form.Item
+                label="Date"
+                name="date"
+                rules={[{ required: true, message: 'Please select date' }]}
+              >
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+              <Form.Item
+                label="Amount"
+                name="amount"
+                rules={[
+                  { required: true, message: 'Please enter amount' },
+                  { type: 'number', min: 1, message: 'Amount must be positive', transform: Number }
+                ]}
+              >
+                <Input
+                  type="number"
+                  placeholder="Amount"
+                  ref={amountInputRef}
+                />
+              </Form.Item>
+              <Form.Item
+                label="Reason for Expenses"
+                name="reason"
+                rules={[{ required: true, message: 'Please select reason' }]}
+              >
+                <Select placeholder="Select Reason" showSearch optionFilterProp="children">
+                  {ITEM_NAMES.map(item => (
+                    <Option key={item} value={item}>{item}</Option>
+                  ))}
+                </Select>
+              </Form.Item>
+              <Form.Item>
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    block
+                    loading={loading}
+                  >
+                    {editingId ? 'Update' : 'Add'} Expense
+                  </Button>
+                  {editingId && (
+                    <Button
+                      block
+                      onClick={() => {
+                        form.resetFields();
+                        setEditingId(null);
+                        form.setFieldsValue({ date: dayjs() });
+                        setTimeout(() => amountInputRef.current?.focus(), 100);
+                      }}
+                      style={{ marginTop: 20 }}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                  <Button
+                    block
+                    style={{ background: '#388e3c', color: '#fff', border: 'none', borderRadius: 4 }}
+                    onClick={handleBulkUploadClick}
+                  >
+                    Bulk Upload (Excel)
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".xls,.xlsx"
+                    style={{ display: 'none' }}
+                    onChange={handleBulkFileChange}
+                  />
+                </Space>
+              </Form.Item>
+            </Form>
+          </Card>
+        </Col>
+        <Col xs={24} md={14}>
+          <Card>
+            <Title level={5} style={{ marginBottom: 16 }}>Expenses List</Title>
+            <ViewExpenses
+              expenses={expenses}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
+          </Card>
+        </Col>
+      </Row>
     </div>
   );
 };

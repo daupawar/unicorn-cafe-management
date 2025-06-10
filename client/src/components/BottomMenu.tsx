@@ -1,165 +1,118 @@
-import { useState, useRef } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FaHome, FaBuilding, FaList, FaPlus, FaMoneyBill, FaUser, FaUpload, FaFileExcel } from 'react-icons/fa';
-import axiosInstance from '../api/axiosInstance';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Menu, Grid } from 'antd';
+import {
+  HomeOutlined,
+  AppstoreOutlined,
+  UserOutlined,
+  DollarOutlined,
+  BranchesOutlined,
+} from '@ant-design/icons';
+
+const { useBreakpoint } = Grid;
 
 const BottomMenu = () => {
   const role = localStorage.getItem('role');
   const location = useLocation();
   const navigate = useNavigate();
-  const [showMenu, setShowMenu] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const screens = useBreakpoint();
 
-  // Handle plus icon click
-  const handlePlusClick = () => {
-    setShowMenu((prev) => !prev);
-  };
+  const isMobile = !screens.md;
 
-  // Handle Add Expense
-  const handleAddExpense = () => {
-    setShowMenu(false);
-    navigate('/add-expense');
-  };
+  const menuLabel = (icon: React.ReactNode, label: string) => (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+      {icon}
+      <span style={{
+        fontSize: 10,
+        marginTop: 2,
+        color: '#888',
+        letterSpacing: 0.5,
+        fontWeight: 500,
+        textTransform: 'capitalize'
+      }}>
+        {label}
+      </span>
+    </div>
+  );
 
-  // Handle Bulk Upload
-  const handleBulkUploadClick = () => {
-    setShowMenu(false);
-    fileInputRef.current?.click();
-  };
-
-  // Handle file upload
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const formData = new FormData();
-    formData.append('file', file);
-    try {
-      await axiosInstance.post('/expenses/bulk-upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      alert('Bulk upload successful!');
-    } catch (err: any) {
-      alert('Bulk upload failed: ' + (err?.response?.data?.message || err.message));
-    }
-    e.target.value = '';
-  };
+  const items = [
+    {
+      key: '/dashboard',
+      icon: menuLabel(<HomeOutlined style={{ fontSize: isMobile ? 18 : 20 }} />, 'dashboard'),
+      label: '',
+      onClick: () => navigate('/dashboard'),
+    },
+    ...(role === 'admin'
+      ? [
+          {
+            key: '/add-branches',
+            icon: menuLabel(<BranchesOutlined style={{ fontSize: isMobile ? 18 : 20 }} />, 'branches'),
+            label: '',
+            onClick: () => navigate('/add-branches'),
+          },
+        ]
+      : []),
+    ...(role === 'admin' || role === 'manager'
+      ? [
+          {
+            key: '/branch-list',
+            icon: menuLabel(<AppstoreOutlined style={{ fontSize: isMobile ? 18 : 20 }} />, 'branch list'),
+            label: '',
+            onClick: () => navigate('/branch-list'),
+          },
+          {
+            key: '/manage-expense-revenue',
+            icon: menuLabel(<DollarOutlined style={{ fontSize: isMobile ? 18 : 20 }} />, 'expenses'),
+            label: '',
+            onClick: () => navigate('/manage-expense-revenue'),
+          },
+        ]
+      : []),
+    {
+      key: '/profile',
+      icon: menuLabel(<UserOutlined style={{ fontSize: isMobile ? 18 : 20 }} />, 'profile'),
+      label: '',
+      onClick: () => navigate('/profile'),
+    },
+  ];
 
   return (
-    <nav
-      className="navbar fixed-bottom navbar-light bg-light border-top"
+    <div
       style={{
-        height: 60,
-        display: 'flex',
-        justifyContent: 'space-around',
-        alignItems: 'center',
-        zIndex: 100,
-        padding: 0,
         position: 'fixed',
         left: 0,
         right: 0,
         bottom: 0,
+        width: '100%',
+        minWidth: 0,
+        zIndex: 1000,
+        background: '#fff',
+        borderTop: '1px solid #eee',
+        boxShadow: '0 -1px 6px #0001',
+        height: isMobile ? 56 : 60,
+        minHeight: isMobile ? 56 : 60,
+        display: 'flex',
+        alignItems: 'stretch',
+        justifyContent: 'center',
+        overflow: 'hidden',
       }}
     >
-      <Link
-        to="/dashboard"
-        className={`text-center flex-fill nav-link${location.pathname === '/dashboard' ? ' active text-primary' : ''}`}
-        style={{ fontSize: 18 }}
-      >
-        <FaHome />
-        <div style={{ fontSize: 12 }}>Dashboard</div>
-      </Link>
-
-      {role === 'admin' && (
-        <Link
-          to="/add-branches"
-          className={`text-center flex-fill nav-link${location.pathname === '/add-branches' ? ' active text-primary' : ''}`}
-          style={{ fontSize: 18 }}
-        >
-          <FaBuilding />
-          <div style={{ fontSize: 12 }}>Manage Branches</div>
-        </Link>
-      )}
-
-   
-{/* Floating menu OUTSIDE the pointerEvents:none container */}
-{showMenu && (
-  <div
-    style={{
-      position: 'fixed',
-      bottom: 70,
-      left: '50%',
-      transform: 'translateX(-50%)',
-      background: '#fff',
-      border: '1px solid #ddd',
-      borderRadius: 8,
-      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-      padding: 8,
-      minWidth: 160,
-      zIndex: 200,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'stretch',
-      pointerEvents: 'auto', // menu is clickable
-    }}
-  >
-    <button
-      className="btn btn-link text-start"
-      style={{ textDecoration: 'none', color: '#1976d2', fontWeight: 500 }}
-      onClick={handleAddExpense}
-    >
-      <FaMoneyBill style={{ marginRight: 8 }} />
-      Add Expense
-    </button>
-    <button
-      className="btn btn-link text-start"
-      style={{ textDecoration: 'none', color: '#388e3c', fontWeight: 500 }}
-      onClick={handleBulkUploadClick}
-    >
-      <FaFileExcel style={{ marginRight: 8 }} />
-      Bulk Upload
-    </button>
-    {/* Hidden file input */}
-    <input
-      ref={fileInputRef}
-      type="file"
-      accept=".xls,.xlsx"
-      style={{ display: 'none' }}
-      onChange={handleFileChange}
-    />
-  </div>
-)}
-
-      {(role === 'admin' || role === 'manager') && (
-        <Link
-          to="/branch-list"
-          className={`text-center flex-fill nav-link${location.pathname === '/branch-list' ? ' active text-primary' : ''}`}
-          style={{ fontSize: 18 }}
-        >
-          <FaList />
-          <div style={{ fontSize: 12 }}>Branch List</div>
-        </Link>
-      )}
-
-      {(role === 'admin' || role === 'manager') && (
-        <Link
-          to="/manage-expense-revenue"
-          className={`text-center flex-fill nav-link${location.pathname === '/manage-expense-revenue' ? ' active text-primary' : ''}`}
-          style={{ fontSize: 18 }}
-        >
-          <FaMoneyBill />
-          <div style={{ fontSize: 12 }}>Expenses</div>
-        </Link>
-      )}
-
-      <Link
-        to="/profile"
-        className={`text-center flex-fill nav-link${location.pathname === '/profile' ? ' active text-primary' : ''}`}
-        style={{ fontSize: 18 }}
-      >
-        <FaUser />
-        <div style={{ fontSize: 12 }}>Profile</div>
-      </Link>
-    </nav>
+      <Menu
+        mode="horizontal"
+        selectedKeys={[location.pathname]}
+        style={{
+          width: '100%',
+          minWidth: 0,
+          border: 'none',
+          display: 'flex',
+          justifyContent: 'space-around',
+          alignItems: 'center',
+          background: 'transparent',
+          fontSize: isMobile ? 12 : 16,
+          height: '100%',
+        }}
+        items={items}
+      />
+    </div>
   );
 };
 

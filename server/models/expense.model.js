@@ -2,8 +2,7 @@ const mongoose = require('mongoose');
 
 const ExpenseSchema = new mongoose.Schema({
   date: { type: Date, required: true },
-  revenue: { type: Number, required: true },
-  expenses: { type: Number, required: true },
+  amount: { type: Number, required: true }, // Use 'amount' for expense value
   reason: { type: String } // Reason For Expenses
 });
 

@@ -1,17 +1,14 @@
-const Expense = require('../models/expense.model');
- 
+const Revenue = require('../models/revenue.model');
 
 exports.addRevenue = async (req, res) => {
   try {
-    const { date, revenue, reason } = req.body;
-    if (!date || typeof revenue !== 'number') {
-      return res.status(400).json({ message: 'Date and revenue are required.' });
+    const { date, amount } = req.body;
+    if (!date || typeof amount !== 'number') {
+      return res.status(400).json({ message: 'Date and amount are required.' });
     }
-    const revenueEntry = new Expense({
+    const revenueEntry = new Revenue({
       date,
-      revenue,
-      expenses: 0,
-      reason: reason || 'Revenue Entry'
+      amount
     });
     await revenueEntry.save();
     res.status(201).json(revenueEntry);
@@ -22,18 +19,17 @@ exports.addRevenue = async (req, res) => {
 
 exports.getAllRevenue = async (req, res) => {
   try {
-    const revenues = await Expense.find({ revenue: { $gt: 0 }, expenses: 0 }).sort({ date: -1 });
+    const revenues = await Revenue.find().sort({ date: -1 });
     res.json(revenues);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-
 exports.getRevenueByDate = async (req, res) => {
   try {
     let { day, month, year } = req.query;
-    let query = { revenue: { $gt: 0 }, expenses: 0 };
+    let query = {};
 
     if (day && month && year) {
       const start = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T00:00:00.000Z`);
@@ -56,10 +52,42 @@ exports.getRevenueByDate = async (req, res) => {
       return res.status(400).json({ message: 'Provide at least one of day, month, or year.' });
     }
 
-    const revenues = await Expense.find(query).sort({ date: 1 }).select('date revenue');
-    const totalRevenue = revenues.reduce((sum, rev) => sum + (rev.revenue || 0), 0);
+    const revenues = await Revenue.find(query).sort({ date: 1 }).select('date amount');
+    const totalRevenue = revenues.reduce((sum, rev) => sum + (rev.amount || 0), 0);
 
     res.json({ revenues, totalRevenue });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Add this to revenue.controller.js
+exports.deleteRevenue = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await Revenue.findByIdAndDelete(id);
+    if (!deleted) {
+      return res.status(404).json({ message: 'Revenue not found' });
+    }
+    res.json({ message: 'Revenue deleted' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.editRevenue = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { date, amount } = req.body;
+    const updated = await Revenue.findByIdAndUpdate(
+      id,
+      { date, amount },
+      { new: true }
+    );
+    if (!updated) {
+      return res.status(404).json({ message: 'Revenue not found' });
+    }
+    res.json(updated);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

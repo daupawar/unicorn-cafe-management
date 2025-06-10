@@ -1,33 +1,35 @@
-// filepath: c:\Users\dell\Downloads\New folder (2)\cafe-daily-expense-manager\client\cafe managment\src\pages\ExpenseRevenueParent.tsx
 import { useState } from 'react';
 import AddExpense from './AddExpense';
 import AddRevenue from './AddRevenue';
+import { Tabs, Card } from 'antd';
 
 const ExpenseRevenueParent = () => {
   const [activeTab, setActiveTab] = useState<'expense' | 'revenue'>('expense');
 
+  const tabItems = [
+    {
+      key: 'expense',
+      label: 'Expenses',
+      children: <AddExpense />,
+    },
+    {
+      key: 'revenue',
+      label: 'Revenue',
+      children: <AddRevenue />,
+    },
+  ];
+
   return (
-    <div>
-      <div style={{ maxWidth: 400, margin: '40px auto 0 auto', display: 'flex', borderBottom: '1px solid #eee' }}>
-        <button
-          className={activeTab === 'expense' ? 'btn btn-primary' : 'btn btn-light'}
-          style={{ flex: 1, borderRadius: '8px 8px 0 0', border: 'none' }}
-          onClick={() => setActiveTab('expense')}
-        >
-          Expenses
-        </button>
-        <button
-          className={activeTab === 'revenue' ? 'btn btn-primary' : 'btn btn-light'}
-          style={{ flex: 1, borderRadius: '8px 8px 0 0', border: 'none' }}
-          onClick={() => setActiveTab('revenue')}
-        >
-          Revenue
-        </button>
-      </div>
-      <div>
-        {activeTab === 'expense' && <AddExpense />}
-        {activeTab === 'revenue' && <AddRevenue />}
-      </div>
+    <div style={{ maxWidth: 1200, margin: '40px auto', width: '100%', paddingBottom:90 }}>
+      <Card>
+        <Tabs
+          activeKey={activeTab}
+          onChange={key => setActiveTab(key as 'expense' | 'revenue')}
+          items={tabItems}
+          tabBarGutter={32}
+          type="line"
+        />
+      </Card>
     </div>
   );
 };

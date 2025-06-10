@@ -1,20 +1,41 @@
 import { useState, useEffect, useRef } from 'react';
 import axiosInstance from '../../api/axiosInstance';
+import {
+  Form,
+  Input,
+  Button,
+  DatePicker,
+  message,
+  Card,
+  Space,
+  Typography,
+  Table,
+  Popconfirm,
+  Row,
+  Col,
+} from 'antd';
+import dayjs from 'dayjs';
+import { EditOutlined, DeleteOutlined, UploadOutlined } from '@ant-design/icons';
+
+const { Title } = Typography;
 
 type Revenue = {
   _id?: string;
   date: string;
-  revenue: number;
-  reason?: string;
+  amount: number;
+  comment?: string;
+  branch?: string;
 };
 
 const AddRevenue = () => {
-  const [form, setForm] = useState<Revenue>({ date: '', revenue: 0 });
+  const [form] = Form.useForm();
   const [revenues, setRevenues] = useState<Revenue[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const amountInputRef = useRef<Input | null>(null);
 
   const fetchRevenues = async () => {
     try {
@@ -27,41 +48,58 @@ const AddRevenue = () => {
 
   useEffect(() => {
     fetchRevenues();
+    // Set today's date as default selected
+    form.setFieldsValue({ date: dayjs() });
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.type === 'number' ? Number(e.target.value) : e.target.value });
-  };
+  // Focus amount field when tab is selected (if used in a tab context)
+  useEffect(() => {
+    const tabBtns = document.querySelectorAll('.ant-tabs-tab');
+    const focusAmount = () => setTimeout(() => amountInputRef.current?.focus(), 100);
+    tabBtns.forEach(btn => btn.addEventListener('click', focusAmount));
+    return () => {
+      tabBtns.forEach(btn => btn.removeEventListener('click', focusAmount));
+    };
+  }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleFinish = async (values: any) => {
     setError('');
     setSuccess('');
+    setLoading(true);
     try {
+      const payload = {
+        ...values,
+        date: values.date ? values.date.format('YYYY-MM-DD') : '',
+      };
       if (editingId) {
-        await axiosInstance.put(`/revenue/${editingId}`, form);
+        await axiosInstance.put(`/revenue/${editingId}`, payload);
         setSuccess('Revenue updated!');
       } else {
-        await axiosInstance.post('/revenue', form);
+        await axiosInstance.post('/revenue', payload);
         setSuccess('Revenue added!');
       }
-      setForm({ date: '', revenue: 0 });
+      form.resetFields();
       setEditingId(null);
+      // Reset today's date after reset
+      form.setFieldsValue({ date: dayjs() });
       fetchRevenues();
     } catch {
       setError('Failed to save revenue');
     }
+    setLoading(false);
   };
 
   const handleEdit = (revenue: Revenue) => {
-    setForm({
-      _id: revenue._id,
-      date: revenue.date?.slice(0, 10),
-      revenue: revenue.revenue,
+    form.setFieldsValue({
+      date: revenue.date ? dayjs(revenue.date) : null,
+      amount: revenue.amount,
+      comment: revenue.comment || '',
+      branch: revenue.branch,
     });
     setEditingId(revenue._id || null);
     setError('');
     setSuccess('');
+    setTimeout(() => amountInputRef.current?.focus(), 100);
   };
 
   const handleDelete = async (id?: string) => {
@@ -70,12 +108,13 @@ const AddRevenue = () => {
     try {
       await axiosInstance.delete(`/revenue/${id}`);
       fetchRevenues();
+      message.success('Revenue deleted!');
     } catch {
       setError('Failed to delete revenue');
     }
   };
 
-  // Bulk upload handlers (optional, can be removed if not needed)
+  // Bulk upload handlers
   const handleBulkUploadClick = () => {
     fileInputRef.current?.click();
   };
@@ -83,10 +122,10 @@ const AddRevenue = () => {
   const handleBulkFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const formData = new FormData();
-    formData.append('file', file);
     setError('');
     setSuccess('');
+    const formData = new FormData();
+    formData.append('file', file);
     try {
       await axiosInstance.post('/revenue/bulk-upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -94,103 +133,152 @@ const AddRevenue = () => {
       setSuccess('Bulk upload successful!');
       fetchRevenues();
     } catch {
-      setError('Bulk upload failed!');
+      setError('Bulk upload failed');
     }
     e.target.value = '';
   };
 
-  return (
-    <div>
-      <form onSubmit={handleSubmit} style={{ maxWidth: 400, margin: '40px auto', padding: 24, border: '1px solid #eee', borderRadius: 8 }}>
-        <h2>{editingId ? 'Edit Revenue' : 'Add Revenue'}</h2>
-        <div className="mb-3">
-          <label htmlFor="revenue-date" className="form-label">Date</label>
-          <input
-            id="revenue-date"
-            name="date"
-            type="date"
-            value={form.date}
-            onChange={handleChange}
-            required
-            className="form-control"
-            style={{ marginBottom: 12, padding: 8 }}
+  // Table columns
+  const columns = [
+    {
+      title: 'Date',
+      dataIndex: 'date',
+      key: 'date',
+      render: (date: string) => date?.slice(0, 10),
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
+    },
+    {
+      title: 'Amount',
+      dataIndex: 'amount',
+      key: 'amount',
+      render: (amount: number) => `₹${amount}`,
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      align: 'center' as const,
+      render: (_: any, record: Revenue) => (
+        <Space size="middle">
+          <Button
+            icon={<EditOutlined />}
+            size="small"
+            onClick={() => handleEdit(record)}
           />
-        </div>
-        <div className="mb-3">
-          <label htmlFor="revenue-amount" className="form-label">Revenue</label>
-          <input
-            id="revenue-amount"
-            name="revenue"
-            type="number"
-            placeholder="Revenue"
-            value={form.revenue}
-            onChange={handleChange}
-            required
-            className="form-control"
-            style={{ marginBottom: 12, padding: 8 }}
-          />
-        </div>
-        <button type="submit" style={{ width: '100%', padding: 10 }}>{editingId ? 'Update' : 'Add'} Revenue</button>
-        {editingId && (
-          <button
-            type="button"
-            onClick={() => { setForm({ date: '', revenue: 0 }); setEditingId(null); }}
-            style={{ width: '100%', padding: 10, marginTop: 8 }}
+          <Popconfirm
+            title="Are you sure to delete this revenue?"
+            onConfirm={() => handleDelete(record._id)}
+            okText="Yes"
+            cancelText="No"
           >
-            Cancel
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={handleBulkUploadClick}
-          style={{ width: '100%', padding: 10, marginTop: 8, background: '#388e3c', color: '#fff', border: 'none', borderRadius: 4 }}
-        >
-          Bulk Upload (Excel)
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".xls,.xlsx"
-          style={{ display: 'none' }}
-          onChange={handleBulkFileChange}
-        />
-        {error && <div style={{ color: 'red', marginTop: 10 }}>{error}</div>}
-        {success && <div style={{ color: 'green', marginTop: 10 }}>{success}</div>}
-      </form>
+            <Button  
+              icon={<DeleteOutlined />}
+              size="small"
+              danger
+            />
+          </Popconfirm>
+        </Space>
+      ),
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
+    },
+  ];
 
-      {/* Revenue List */}
-      <div style={{ maxWidth: 700, margin: '30px auto' }}>
-        <h4>Revenue List</h4>
-        <div className="table-responsive">
-          <table className="table table-sm table-bordered mb-0">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Revenue</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {revenues.length > 0 ? (
-                revenues.map((rev) => (
-                  <tr key={rev._id}>
-                    <td>{rev.date?.slice(0, 10)}</td>
-                    <td>₹{rev.revenue}</td>
-                    <td>
-                      <button className="btn btn-sm btn-warning me-2" onClick={() => handleEdit(rev)}>Edit</button>
-                      <button className="btn btn-sm btn-danger" onClick={() => handleDelete(rev._id)}>Delete</button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={3} className="text-center text-muted">No revenue records</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+  return (
+    <div style={{ maxWidth: 1200, margin: '40px auto', width: '100%', paddingBottom:90 }}>
+      <Row gutter={[24, 24]}>
+        <Col xs={24} md={10}>
+          <Card>
+            <Title level={5} style={{ marginBottom: 16 }}>
+              {editingId ? 'Edit Revenue' : 'Add Revenue'}
+            </Title>
+            <Form
+              form={form}
+              layout="vertical"
+              onFinish={handleFinish}
+              initialValues={{ amount: null, date: dayjs() }}
+            >
+              <Form.Item
+                label="Date"
+                name="date"
+                rules={[{ required: true, message: 'Please select date' }]}
+              >
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+              <Form.Item
+                label="Amount"
+                name="amount"
+                rules={[
+                  { required: true, message: 'Please enter amount' },
+                  { type: 'number', min: 1, message: 'Amount must be positive', transform: Number }
+                ]}
+              >
+                <Input
+                  type="number"
+                  placeholder="Amount"
+                  ref={amountInputRef}
+                />
+              </Form.Item>
+              <Form.Item>
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    block
+                    loading={loading}
+                  >
+                    {editingId ? 'Update' : 'Add'} Revenue
+                  </Button>
+                  {editingId && (
+                    <Button
+                      block
+                      onClick={() => {
+                        form.resetFields();
+                        setEditingId(null);
+                        form.setFieldsValue({ date: dayjs() });
+                        setTimeout(() => amountInputRef.current?.focus(), 100);
+                      }}
+                      style={{ marginTop: 0 }}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                  <Button
+                    block
+                    icon={<UploadOutlined />}
+                    style={{ background: '#388e3c', color: '#fff', border: 'none', borderRadius: 4 }}
+                    onClick={handleBulkUploadClick}
+                  >
+                    Bulk Upload (Excel)
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".xls,.xlsx"
+                    style={{ display: 'none' }}
+                    onChange={handleBulkFileChange}
+                  />
+                </Space>
+              </Form.Item>
+              {error && <div style={{ color: 'red', marginTop: 10 }}>{error}</div>}
+              {success && <div style={{ color: 'green', marginTop: 10 }}>{success}</div>}
+            </Form>
+          </Card>
+        </Col>
+        <Col xs={24} md={14}>
+          <Card>
+            <Title level={5} style={{ marginBottom: 16 }}>Revenue List</Title>
+            <Table
+              columns={columns}
+              dataSource={revenues}
+              rowKey={record => record._id || record.date + record.amount}
+              pagination={{ pageSize: 8, showSizeChanger: false }}
+              size="middle"
+              scroll={{ x: true }}
+              bordered
+            />
+          </Card>
+        </Col>
+      </Row>
     </div>
   );
 };

@@ -1,12 +1,32 @@
-import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { FaHome, FaBuilding, FaList, FaMoneyBill, FaUser } from 'react-icons/fa';
-import 'bootstrap/dist/css/bootstrap.min.css';
 import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom'; 
+import {
+  Layout,
+  Card,
+  Select,
+  DatePicker,
+  Table,
+  Tabs,
+  Statistic,
+  Row,
+  Col,
+  Typography,
+  Input,
+  Space,
+  Grid,
+  Descriptions
+} from 'antd';
 import { Pie } from 'react-chartjs-2';
 import { Chart, ArcElement, Tooltip, Legend } from 'chart.js';
-Chart.register(ArcElement, Tooltip, Legend);
+import dayjs from 'dayjs';
 import axiosInstance from '../api/axiosInstance';
 import './Dashboard.css';
+
+Chart.register(ArcElement, Tooltip, Legend);
+
+const { Title, Text } = Typography;
+const { Option } = Select;
+const { useBreakpoint } = Grid;
 
 const months = [
   { value: '01', label: 'January' },
@@ -23,10 +43,23 @@ const months = [
   { value: '12', label: 'December' },
 ];
 
+const branchOptions = [
+  { label: 'Rankala', value: 'Rankala' },
+  { label: 'Dhyanchand Hockey Stadium', value: 'Dhyanchand Hockey Stadium' }
+];
+
+const getYearOptions = (range = 10) => {
+  const currentYear = new Date().getFullYear();
+  return Array.from({ length: range }, (_, i) => {
+    const year = currentYear - i;
+    return { label: year.toString(), value: year.toString() };
+  });
+};
+
 const Dashboard = () => {
-  const role = localStorage.getItem('role');
   const navigate = useNavigate();
   const location = useLocation();
+  const screens = useBreakpoint();
 
   // Toggle between 'day' and 'month' mode
   const [mode, setMode] = useState<'day' | 'month'>('day');
@@ -53,11 +86,36 @@ const Dashboard = () => {
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [activeBranches, setActiveBranches] = useState(0);
 
-   // Fetch both expenses and revenues using their respective /by-date APIs
+  const [summary, setSummary] = useState<{ users?: number; branches?: number; grandTotalExpenses?: number; grandTotalProfit?: number } | null>(null);
+
+  // Branch selection for admin
+  const role = localStorage.getItem('role');
+  const [selectedBranch, setSelectedBranch] = useState<string>(() => localStorage.getItem('selectedBranch') || branchOptions[0].value);
+
+  const handleBranchChange = (value: string) => {
+    setSelectedBranch(value);
+    localStorage.setItem('selectedBranch', value);
+  };
+
+  // Fetch summary stats (including active branches) from API
+  useEffect(() => {
+    const fetchSummary = async () => {
+      try {
+        const res = await axiosInstance.get('/stats/summary');
+        setSummary(res.data);
+        setActiveBranches(res.data.branches || 0);
+      } catch {
+        setSummary(null);
+        setActiveBranches(0);
+      }
+    };
+    fetchSummary();
+  }, []);
+
+  // Fetch both expenses and revenues using their respective /by-date APIs
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Prepare query params
         let params: any = {};
         if (mode === 'day') {
           const dateObj = new Date(selectedDate);
@@ -71,26 +129,26 @@ const Dashboard = () => {
 
         // Expenses by date
         const expRes = await axiosInstance.get('/expenses/by-date', { params });
-        const expList = (expRes.data.expenses || expRes.data).filter((exp: any) => exp.expenses > 0);
+        const expList = (expRes.data.expenses || expRes.data).filter((exp: any) => exp.amount > 0);
         setExpenses(
           expList.map((exp: any) => ({
             reason: exp.reason,
-            amount: exp.expenses,
+            amount: exp.amount,
             date: exp.date,
           }))
         );
-        setTotalExpenses(expList.reduce((sum: number, exp: any) => sum + exp.expenses, 0));
+        setTotalExpenses(expList.reduce((sum: number, exp: any) => sum + exp.amount, 0));
 
         // Revenues by date
         const revRes = await axiosInstance.get('/revenue/by-date', { params });
-        const revList = (revRes.data.revenues || revRes.data).filter((rev: any) => rev.revenue > 0);
+        const revList = (revRes.data.revenues || revRes.data).filter((rev: any) => rev.amount > 0);
         setRevenues(
           revList.map((rev: any) => ({
-            amount: rev.revenue,
+            amount: rev.amount,
             date: rev.date,
           }))
         );
-        setTotalRevenue(revRes.data.totalRevenue || revList.reduce((sum: number, rev: any) => sum + (rev.revenue || 0), 0));
+        setTotalRevenue(revRes.data.totalRevenue || revList.reduce((sum: number, rev: any) => sum + (rev.amount || 0), 0));
       } catch {
         setExpenses([]);
         setRevenues([]);
@@ -106,300 +164,330 @@ const Dashboard = () => {
     setActiveBranches(4);
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('role');
-    navigate('/login');
-  };
+  const yearOptions = getYearOptions(10);
 
   return (
-    <div style={{ paddingBottom: 70 }}>
-      {/* Dashboard 4 Boxes */}
-      <div className="container-fluid">
-        {/* Header */}
-        <header className="d-flex justify-content-between align-items-center mb-4">
-          <button className="btn btn-outline-danger" onClick={handleLogout}>
-            Logout
-          </button>
-        </header>
-        <p>
-          Welcome, your role is <b>{role}</b>.
-        </p>
-
-        <div className="row g-3">
-          {/* Daily Sales Summary */}
-          <div className="col-12 col-md-6">
-            <div className="card h-100 shadow-sm dashboard-card">
-              <div className="card-body dashboard-card-body">
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                  <h5 className="card-title mb-0">Daily Sales Summary</h5>
-                  <div className="d-flex align-items-center gap-2">
-                    <select
-                      className="form-select form-select-sm"
-                      style={{ width: 90 }}
-                      value={mode}
-                      onChange={e => setMode(e.target.value as 'day' | 'month')}
-                    >
-                      <option value="day">Day</option>
-                      <option value="month">Month</option>
-                    </select>
-                    {mode === 'day' ? (
-                      <input
-                        type="date"
-                        value={selectedDate}
-                        onChange={e => setSelectedDate(e.target.value)}
-                        className="form-control form-control-sm"
-                        style={{ width: 130 }}
-                      />
-                    ) : (
-                      <>
-                        <select
-                          className="form-select form-select-sm"
-                          style={{ width: 110 }}
-                          value={selectedMonth}
-                          onChange={e => setSelectedMonth(e.target.value)}
-                        >
-                          {months.map(m => (
-                            <option key={m.value} value={m.value}>{m.label}</option>
-                          ))}
-                        </select>
-                        <input
-                          type="number"
-                          min="2000"
-                          max="2100"
-                          value={selectedYear}
-                          onChange={e => setSelectedYear(e.target.value)}
-                          className="form-control form-control-sm"
-                          style={{ width: 70 }}
-                        />
-                      </>
-                    )}
-                  </div>
-                </div>
-                {/* Tabs for Revenue/Expenses */}
-                <div className="d-flex mb-3">
-                  <button
-                    className={`btn btn-sm ${salesTab === 'revenue' ? 'btn-success' : 'btn-outline-success'}`}
-                    style={{ flex: 1, borderRadius: '8px 0 0 8px' }}
-                    onClick={() => setSalesTab('revenue')}
-                  >
-                    Revenue
-                  </button>
-                  <button
-                    className={`btn btn-sm ${salesTab === 'expense' ? 'btn-danger' : 'btn-outline-danger'}`}
-                    style={{ flex: 1, borderRadius: '0 8px 8px 0' }}
-                    onClick={() => setSalesTab('expense')}
-                  >
-                    Expenses
-                  </button>
-                </div>
-                {/* Tab Content */}
-                {salesTab === 'revenue' ? (
-                  <div>
-                    <div className="mb-2" style={{ fontWeight: 600, color: '#388e3c' }}>
-                      Total Revenue: ₹{totalRevenue}
-                    </div>
-                    <div className="table-responsive">
-                      <table className="table table-sm table-bordered mb-0">
-                        <thead>
-                          <tr>
-                            <th>Date</th>
-                            <th>Revenue</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {revenues.length > 0 ? (
-                            revenues.map((rev, idx) => (
-                              <tr key={idx}>
-                                <td>{rev.date?.slice(0, 10)}</td>
-                                <td>₹{rev.amount}</td>
-                              </tr>
-                            ))
-                          ) : (
-                            <tr>
-                              <td colSpan={2} className="text-center text-muted">No data</td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <div className="mb-2" style={{ fontWeight: 600, color: '#d32f2f' }}>
-                      Total Expenses: ₹{totalExpenses}
-                    </div>
-                    <div className="table-responsive">
-                      <table className="table table-sm table-bordered mb-0">
-                        <thead>
-                          <tr>
-                            <th>Reason</th>
-                            <th>Amount</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {expenses.length > 0 ? (
-                            expenses.map((exp, idx) => (
-                              <tr key={idx}>
-                                <td>{exp.reason}</td>
-                                <td>₹{exp.amount}</td>
-                              </tr>
-                            ))
-                          ) : (
-                            <tr>
-                              <td colSpan={2} className="text-center text-muted">No data</td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-                {/* Grand Total */}
-                <div className="mt-3" style={{ fontWeight: 700, fontSize: 16 }}>
-                  Grand Total (Revenue - Expenses): <span style={{ color: '#1976d2' }}>₹{totalRevenue - totalExpenses}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Today's Expenses & Revenue Pie Chart */}
-          <div className="col-12 col-md-6">
-            <div className="card h-100 shadow-sm dashboard-card">
-              <div className="card-body d-flex flex-column justify-content-center align-items-center dashboard-card-body">
-                <h5 className="card-title">Revenue vs Expenses</h5>
-                <div style={{ fontSize: 32, fontWeight: 700, color: '#388e3c' }}>₹{totalRevenue}</div>
-                <div className="dashboard-profit-expense-graph">
-                  <Pie
-                    data={{
-                      labels: ['Revenue', 'Expenses'],
-                      datasets: [
-                        {
-                          data: [
-                            totalRevenue,
-                            totalExpenses
-                          ],
-                          backgroundColor: ['#388e3c', '#d32f2f'],
-                          borderWidth: 1,
-                        },
-                      ],
-                    }}
-                    options={{
-                      plugins: {
-                        legend: {
-                          display: true,
-                          position: 'bottom' as const,
-                        },
-                      },
-                      cutout: '60%',
-                      responsive: true,
-                      maintainAspectRatio: false,
-                    }}
-                  />
-                </div>
-                <div className="dashboard-profit-expense-row">
-                  <span style={{ color: '#388e3c' }}>Revenue: ₹{totalRevenue}</span>
-                  <span style={{ color: '#d32f2f' }}>Expenses: ₹{totalExpenses}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Active Branches */}
-          <div className="col-12 col-md-6">
-            <div className="card h-100 shadow-sm dashboard-card">
-              <div className="card-body d-flex flex-column justify-content-center align-items-center dashboard-card-body">
-                <h5 className="card-title">Active Branches</h5>
-                <div style={{ fontSize: 32, fontWeight: 700, color: '#1976d2' }}>{activeBranches}</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Other */}
-          <div className="col-12 col-md-6">
-            <div className="card h-100 shadow-sm dashboard-card">
-              <div className="card-body d-flex flex-column justify-content-center align-items-center dashboard-card-body">
-                <h5 className="card-title">Other</h5>
-                <div style={{ fontSize: 18, color: '#888' }}>Add your custom info here</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Navigation Menu */}
-      <nav
-        className="navbar fixed-bottom navbar-light bg-light border-top"
+    <Layout.Content
+      style={{
+        padding: '15px 0',
+        background: '#f5f6fa'
+      }}
+    >
+      <div
         style={{
-          height: 60,
-          display: 'flex',
-          justifyContent: 'space-around',
-          alignItems: 'center',
-          zIndex: 100,
-          padding: 0,
-          position: 'fixed',
-          left: 0,
-          right: 0,
-          bottom: 0,
+          margin: '0 auto',
+          padding: '0 16px'
         }}
       >
-        {/* Dashboard */}
-        <Link
-          to="/dashboard"
-          className={`text-center flex-fill nav-link${location.pathname === '/dashboard' ? ' active text-primary' : ''}`}
-          style={{ fontSize: 18 }}
-        >
-          <FaHome />
-          <div style={{ fontSize: 12 }}>Dashboard</div>
-        </Link>
+        <Row align="middle" justify="space-between" gutter={8} style={{ marginBottom: 0 }}>
+           
+        </Row>
 
-        {/* Branch Management (admin only) */}
-        {role === 'admin' && (
-          <Link
-            to="/add-branches"
-            className={`text-center flex-fill nav-link${location.pathname === '/add-branches' ? ' active text-primary' : ''}`}
-            style={{ fontSize: 18 }}
-          >
-            <FaBuilding />
-            <div style={{ fontSize: 12 }}>Branches</div>
-          </Link>
-        )}
+        <Row gutter={[12, 12]}>
+          {/* Daily Sales Summary */}
+          <Col xs={24} md={12}>
+            <Card
+              bodyStyle={{ padding: 14 }}
+              title={
+                <div>
+                  Daily Sales Summary
+                  {/* On mobile, controls will be rendered below */}
+                </div>
+              }
+              extra={
+                screens.md ? (
+                  <Space>
+                    <Select
+                      value={mode}
+                      onChange={value => setMode(value)}
+                      style={{ width: 90 }}
+                      size="small"
+                    >
+                      <Option value="day">Day</Option>
+                      <Option value="month">Month</Option>
+                    </Select>
+                    {mode === 'day' ? (
+                      <DatePicker
+                        value={dayjs(selectedDate)}
+                        onChange={date => setSelectedDate(date?.format('YYYY-MM-DD') || '')}
+                        style={{ width: 130 }}
+                        size="small"
+                      />
+                    ) : (
+                      <Space>
+                        <Select
+                          value={selectedMonth}
+                          onChange={setSelectedMonth}
+                          style={{ width: 110 }}
+                          size="small"
+                        >
+                          {months.map(m => (
+                            <Option key={m.value} value={m.value}>
+                              {m.label}
+                            </Option>
+                          ))}
+                        </Select>
+                        <Select
+                          value={selectedYear}
+                          onChange={setSelectedYear}
+                          style={{ width: 90 }}
+                          size="small"
+                          options={yearOptions}
+                        />
+                      </Space>
+                    )}
+                  </Space>
+                ) : null
+              }
+            >
+              {/* On mobile, show controls here */}
+              {!screens.md && (
+                <div style={{ marginBottom: 12 }}>
+                  <Row gutter={8} wrap align="middle">
+                    <Col span={24}>
+                      <Select
+                        value={mode}
+                        onChange={value => setMode(value)}
+                        style={{ width: '100%' }}
+                        size="small"
+                      >
+                        <Option value="day">Day</Option>
+                        <Option value="month">Month</Option>
+                      </Select>
+                    </Col>
+                    <Col span={24} style={{ marginTop: 8 }}>
+                      <Row gutter={8}>
+                        {mode === 'day' ? (
+                          <>
+                            <Col span={12}>
+                              <DatePicker
+                                value={dayjs(selectedDate)}
+                                onChange={date => setSelectedDate(date?.format('YYYY-MM-DD') || '')}
+                                style={{ width: '100%' }}
+                                size="small"
+                              />
+                            </Col>
+                            <Col span={12}></Col>
+                          </>
+                        ) : (
+                          <>
+                            <Col span={12}>
+                              <Select
+                                value={selectedMonth}
+                                onChange={setSelectedMonth}
+                                style={{ width: '100%' }}
+                                size="small"
+                              >
+                                {months.map(m => (
+                                  <Option key={m.value} value={m.value}>
+                                    {m.label}
+                                  </Option>
+                                ))}
+                              </Select>
+                            </Col>
+                            <Col span={12}>
+                              <Select
+                                value={selectedYear}
+                                onChange={setSelectedYear}
+                                style={{ width: '100%' }}
+                                size="small"
+                                options={yearOptions}
+                              />
+                            </Col>
+                          </>
+                        )}
+                      </Row>
+                    </Col>
+                  </Row>
+                </div>
+              )}
 
-        {/* Branch List */}
-        {(role === 'admin' || role === 'manager') && (
-          <Link
-            to="/branch-list"
-            className={`text-center flex-fill nav-link${location.pathname === '/branch-list' ? ' active text-primary' : ''}`}
-            style={{ fontSize: 18 }}
-          >
-            <FaList />
-            <div style={{ fontSize: 12 }}>Branch List</div>
-          </Link>
-        )}
+              <Tabs
+                activeKey={salesTab}
+                onChange={key => setSalesTab(key as 'revenue' | 'expense')}
+                items={[
+                  {
+                    key: 'revenue',
+                    label: 'Revenue',
+                    children: (
+                      <>
+                        <Statistic
+                          title="Total Revenue"
+                          value={totalRevenue}
+                          prefix="₹"
+                          valueStyle={{ color: '#388e3c' }}
+                        />
+                        <Table
+                          dataSource={revenues}
+                          columns={[
+                            {
+                              title: 'Date',
+                              dataIndex: 'date',
+                              key: 'date',
+                              render: date => date?.slice(0, 10)
+                            },
+                            {
+                              title: 'Amount',
+                              dataIndex: 'amount',
+                              key: 'amount',
+                              render: amount => `₹${amount}`
+                            }
+                          ]}
+                          pagination={false}
+                          size="small"
+                          style={{ marginTop: 12 }}
+                          rowKey={r => r.date + r.amount}
+                        />
+                      </>
+                    )
+                  },
+                  {
+                    key: 'expense',
+                    label: 'Expenses',
+                    children: (
+                      <>
+                        <Statistic
+                          title="Total Expenses"
+                          value={totalExpenses}
+                          prefix="₹"
+                          valueStyle={{ color: '#d32f2f' }}
+                        />
+                        <Table
+                          dataSource={expenses}
+                          columns={[
+                            {
+                              title: 'Date',
+                              dataIndex: 'date',
+                              key: 'date',
+                              render: date => date?.slice(0, 10)
+                            },
+                            {
+                              title: 'Amount',
+                              dataIndex: 'amount',
+                              key: 'amount',
+                              render: amount => `₹${amount}`
+                            },
+                            {
+                              title: 'Reason',
+                              dataIndex: 'reason',
+                              key: 'reason'
+                            }
+                          ]}
+                          pagination={false}
+                          size="small"
+                          style={{ marginTop: 12 }}
+                          rowKey={r => r.date + r.amount + r.reason}
+                        />
+                      </>
+                    )
+                  }
+                ]}
+              />
+              <Statistic
+                title="Total (Revenue - Expenses)"
+                value={totalRevenue - totalExpenses}
+                prefix="₹"
+                valueStyle={{ color: '#1976d2' }}
+                style={{ marginTop: 16 }}
+              />
+            </Card>
+          </Col>
 
-        {/* Expense Management */}
-        {(role === 'admin' || role === 'manager') && (
-          <Link
-            to="/manage-expense-revenue"
-            className={`text-center flex-fill nav-link${location.pathname === '/manage-expense-revenue' ? ' active text-primary' : ''}`}
-            style={{ fontSize: 18 }}
-          >
-            <FaMoneyBill />
-            <div style={{ fontSize: 12 }}>Expenses</div>
-          </Link>
-        )}
+          {/* Revenue vs Expenses Pie Chart */}
+          <Col xs={24} md={12}>
+            <Card
+              bodyStyle={{ padding: 14 }}
+              title="Revenue vs Expenses"
+            >
+              <div style={{ height: 180, margin: '10px 0' }}>
+                <Pie
+                  data={{
+                    labels: ['Revenue', 'Expenses'],
+                    datasets: [
+                      {
+                        data: [totalRevenue, totalExpenses],
+                        backgroundColor: ['#388e3c', '#d32f2f'],
+                        borderWidth: 1
+                      }
+                    ]
+                  }}
+                  options={{
+                    plugins: {
+                      legend: {
+                        display: true,
+                        position: 'bottom' as const
+                      }
+                    },
+                    cutout: '60%',
+                    responsive: true,
+                    maintainAspectRatio: false
+                  }}
+                />
+              </div>
+              <Row justify="center" gutter={16}>
+                <Col>
+                  <Statistic
+                    title="Revenue"
+                    value={totalRevenue}
+                    prefix="₹"
+                    valueStyle={{ color: '#388e3c' }}
+                  />
+                </Col>
+                <Col>
+                  <Statistic
+                    title="Expenses"
+                    value={totalExpenses}
+                    prefix="₹"
+                    valueStyle={{ color: '#d32f2f' }}
+                  />
+                </Col>
+              </Row>
+            </Card>
+          </Col>
 
-        {/* Profile */}
-        <Link
-          to="/profile"
-          className={`text-center flex-fill nav-link${location.pathname === '/profile' ? ' active text-primary' : ''}`}
-          style={{ fontSize: 18 }}
-        >
-          <FaUser />
-          <div style={{ fontSize: 12 }}>Profile</div>
-        </Link>
-      </nav>
-    </div>
+          {/* System Summary */}
+          <Col xs={24} md={12}>
+            <Card style={{ height: '100%' }} bodyStyle={{ padding: 10 }} title="System Summary">
+              {summary ? (
+                <Descriptions
+                  column={1}
+                  size="small"
+                  bordered
+                  labelStyle={{ fontWeight: 600, width: 160 }}
+                  contentStyle={{ textAlign: 'right' }}
+                >
+                  <Descriptions.Item label="Users">{summary.users ?? '-'}</Descriptions.Item>
+                  <Descriptions.Item label="Branches">{summary.branches ?? '-'}</Descriptions.Item>
+                  <Descriptions.Item label="Total Expenses">
+                    <span style={{ color: '#d32f2f', fontWeight: 500 }}>
+                      ₹{summary.grandTotalExpenses ?? '-'}
+                    </span>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Grand Total Profit">
+                    <span style={{ color: '#388e3c', fontWeight: 500 }}>
+                      ₹{summary.grandTotalProfit ?? '-'}
+                    </span>
+                  </Descriptions.Item>
+                </Descriptions>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '10px' }}>
+                  <Statistic title="Loading..." value={0} />
+                </div>
+              )}
+            </Card>
+          </Col>
+
+          {/* Other */}
+          <Col xs={24} md={12}>
+            <Card style={{ height: '100%' }} bodyStyle={{ padding: 10 }} title="Other">
+              <div style={{ textAlign: 'center', color: '#888', fontSize: 18 }}>
+                Add your custom info here
+              </div>
+            </Card>
+          </Col>
+        </Row>
+      </div>
+    </Layout.Content>
   );
 };
 

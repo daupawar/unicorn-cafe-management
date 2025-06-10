@@ -1,20 +1,20 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../api/axiosInstance';
+import { Form, Input, Button, Card, Typography, message, Row, Col, Grid } from 'antd';
+
+const { Title } = Typography;
+const { useBreakpoint } = Grid;
+
 const Login = () => {
-  const [form, setForm] = useState({ username: '', password: '' });
-  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const screens = useBreakpoint();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+  const onFinish = async (values: { username: string; password: string }) => {
+    setLoading(true);
     try {
-      const res = await axiosInstance.post('https://unicorn-cafe-management.onrender.com/api/auth/login', form);
+      const res = await axiosInstance.post('http://localhost:5000/api/auth/login', values);
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('role', res.data.role);
       // Redirect based on role
@@ -22,35 +22,99 @@ const Login = () => {
         navigate('/dashboard');
       } else if (res.data.role === 'staff') {
         navigate('/dashboard'); // or another route for staff
+      } else {
+        navigate('/dashboard');
       }
     } catch {
-      setError('Invalid username or password');
+      message.error('Invalid username or password');
     }
+    setLoading(false);
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: 300, margin: '40px auto', padding: 24, border: '1px solid #eee', borderRadius: 8 }}>
-      <h2>Login</h2>
-      <input
-        name="username"
-        placeholder="Username"
-        value={form.username}
-        onChange={handleChange}
-        required
-        style={{ display: 'block', width: '100%', marginBottom: 12, padding: 8 }}
-      />
-      <input
-        name="password"
-        type="password"
-        placeholder="Password"
-        value={form.password}
-        onChange={handleChange}
-        required
-        style={{ display: 'block', width: '100%', marginBottom: 12, padding: 8 }}
-      />
-      <button type="submit" style={{ width: '100%', padding: 10 }}>Login</button>
-      {error && <div style={{ color: 'red', marginTop: 10 }}>{error}</div>}
-    </form>
+    <div style={{ minHeight: '100vh', height: '100vh', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Row style={{ width: '100%', height: '100vh' }} align="middle" justify="center">
+        {screens.md && (
+          <Col
+            md={17}
+            style={{
+              background: '#e9c920',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexDirection: 'column',
+              height: '100vh',
+              padding: 0,
+              margin: 0,
+            }}
+          >
+            <img
+              src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80"
+              alt="Cafe Banner"
+              style={{
+                width: '100%',
+                height: '100vh',
+                objectFit: 'cover',
+                objectPosition: 'center',
+                borderRadius: 0,
+                boxShadow: 'none',
+                marginBottom: 0,
+                border: 'none'
+              }}
+            />
+            <div style={{
+              position: 'absolute',
+              top: 40,
+              left: 0,
+              width: '100%',
+              textAlign: 'center',
+              zIndex: 2,
+              pointerEvents: 'none'
+            }}>
+              <Title level={2} style={{ color: '#fff', textShadow: '0 2px 8px #b89d0c', fontWeight: 700 }}>
+                Welcome to Unicorn Cafe
+              </Title>
+            </div>
+          </Col>
+        )}
+        <Col xs={24} md={7} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+          <Card style={{ width: '100%', maxWidth: 350, borderRadius: 8, margin: '0 auto' }}>
+            <Title level={3} style={{ textAlign: 'center', marginBottom: 24 }}>Login</Title>
+            <Form
+              layout="vertical"
+              onFinish={onFinish}
+              autoComplete="off"
+            >
+              <Form.Item
+                label="Username"
+                name="username"
+                rules={[{ required: true, message: 'Please enter your username' }]}
+              >
+                <Input placeholder="Username" />
+              </Form.Item>
+              <Form.Item
+                label="Password"
+                name="password"
+                rules={[{ required: true, message: 'Please enter your password' }]}
+              >
+                <Input.Password placeholder="Password" />
+              </Form.Item>
+              <Form.Item>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  block
+                  loading={loading}
+                  style={{ fontWeight: 600 }}
+                >
+                  Login
+                </Button>
+              </Form.Item>
+            </Form>
+          </Card>
+        </Col>
+      </Row>
+    </div>
   );
 };
 
