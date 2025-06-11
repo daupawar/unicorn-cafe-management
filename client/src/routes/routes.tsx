@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, type JSX } from 'react';
 import { Navigate } from 'react-router-dom';
 import ProtectedRoute from '../shared/ProtectedRoute';
 import Profile from '../pages/profile/Profile';

@@ -16,6 +16,7 @@ import {
 } from 'antd';
 import dayjs from 'dayjs';
 import { EditOutlined, DeleteOutlined, UploadOutlined } from '@ant-design/icons';
+import type { Breakpoint } from 'antd/es/_util/responsiveObserver';
 
 const { Title } = Typography;
 
@@ -35,11 +36,15 @@ const AddRevenue = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const amountInputRef = useRef<Input | null>(null);
+  const amountInputRef = useRef<HTMLInputElement | null>(null);
 
+   // Fetch revenues for selected branch
   const fetchRevenues = async () => {
     try {
-      const res = await axiosInstance.get('/revenue');
+      const branch = localStorage.getItem('selectedBranch') || '';
+      const res = await axiosInstance.get('/revenue', {
+        params: { branch }
+      });
       setRevenues(res.data);
     } catch {
       setError('Failed to fetch revenue');
@@ -62,32 +67,41 @@ const AddRevenue = () => {
     };
   }, []);
 
-  const handleFinish = async (values: any) => {
-    setError('');
-    setSuccess('');
-    setLoading(true);
-    try {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const handleFinish = async (values: any) => {
+  setError('');
+  setSuccess('');
+  setLoading(true);
+  try {
+    const branch = localStorage.getItem('selectedBranch') || '';
       const payload = {
         ...values,
         date: values.date ? values.date.format('YYYY-MM-DD') : '',
+        amount: Number(values.amount),
+        branch, // Pass branch from localStorage
       };
-      if (editingId) {
-        await axiosInstance.put(`/revenue/${editingId}`, payload);
-        setSuccess('Revenue updated!');
-      } else {
-        await axiosInstance.post('/revenue', payload);
-        setSuccess('Revenue added!');
-      }
-      form.resetFields();
-      setEditingId(null);
-      // Reset today's date after reset
-      form.setFieldsValue({ date: dayjs() });
-      fetchRevenues();
-    } catch {
-      setError('Failed to save revenue');
+    if (!payload.date || isNaN(payload.amount)) {
+      setError('Date and amount are required.');
+      setLoading(false);
+      return;
     }
-    setLoading(false);
-  };
+    if (editingId) {
+      await axiosInstance.put(`/revenue/${editingId}`, payload);
+      setSuccess('Revenue updated!');
+    } else {
+      await axiosInstance.post('/revenue', payload);
+      setSuccess('Revenue added!');
+    }
+    form.resetFields();
+    setEditingId(null);
+    // Reset today's date after reset
+    form.setFieldsValue({ date: dayjs() });
+    fetchRevenues();
+  } catch {
+    setError('Failed to save revenue');
+  }
+  setLoading(false);
+};
 
   const handleEdit = (revenue: Revenue) => {
     form.setFieldsValue({
@@ -127,7 +141,7 @@ const AddRevenue = () => {
     const formData = new FormData();
     formData.append('file', file);
     try {
-      await axiosInstance.post('/revenue/bulk-upload', formData, {
+      await axiosInstance.post('/expences/bulk-upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setSuccess('Bulk upload successful!');
@@ -145,19 +159,20 @@ const AddRevenue = () => {
       dataIndex: 'date',
       key: 'date',
       render: (date: string) => date?.slice(0, 10),
-      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'] as Breakpoint[],
     },
     {
       title: 'Amount',
       dataIndex: 'amount',
       key: 'amount',
       render: (amount: number) => `₹${amount}`,
-      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'] as Breakpoint[],
     },
     {
       title: 'Actions',
       key: 'actions',
       align: 'center' as const,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       render: (_: any, record: Revenue) => (
         <Space size="middle">
           <Button
@@ -179,16 +194,16 @@ const AddRevenue = () => {
           </Popconfirm>
         </Space>
       ),
-      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'] as Breakpoint[],
     },
   ];
 
   return (
-    <div style={{ maxWidth: 1200, margin: '40px auto', width: '100%', paddingBottom:90 }}>
+    <div style={{ maxWidth: 1200, margin: '10px auto', width: '100%', paddingBottom:20 }}>
       <Row gutter={[24, 24]}>
         <Col xs={24} md={10}>
           <Card>
-            <Title level={5} style={{ marginBottom: 16 }}>
+            <Title level={5} style={{ marginBottom: 15, marginTop: 10 }}>
               {editingId ? 'Edit Revenue' : 'Add Revenue'}
             </Title>
             <Form
@@ -215,7 +230,12 @@ const AddRevenue = () => {
                 <Input
                   type="number"
                   placeholder="Amount"
-                  ref={amountInputRef}
+                  ref={input => {
+                    // AntD Input passes the component instance, but we want the native input
+                    if (input) {
+                      amountInputRef.current = input.input;
+                    }
+                  }}
                 />
               </Form.Item>
               <Form.Item>
@@ -266,7 +286,7 @@ const AddRevenue = () => {
         </Col>
         <Col xs={24} md={14}>
           <Card>
-            <Title level={5} style={{ marginBottom: 16 }}>Revenue List</Title>
+            <Title level={5} style={{ marginBottom: 10, marginTop:10 }}>Revenue List</Title>
             <Table
               columns={columns}
               dataSource={revenues}

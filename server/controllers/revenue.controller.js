@@ -2,16 +2,13 @@ const Revenue = require('../models/revenue.model');
 
 exports.addRevenue = async (req, res) => {
   try {
-    const { date, amount } = req.body;
-    if (!date || typeof amount !== 'number') {
-      return res.status(400).json({ message: 'Date and amount are required.' });
+    const { date, amount, branch } = req.body;
+    if (!date || typeof amount !== 'number' || !branch) {
+      return res.status(400).json({ message: 'Date, amount, and branch are required.' });
     }
-    const revenueEntry = new Revenue({
-      date,
-      amount
-    });
-    await revenueEntry.save();
-    res.status(201).json(revenueEntry);
+    const revenue = new Revenue({ date, amount, branch });
+    await revenue.save();
+    res.status(201).json(revenue);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -19,16 +16,19 @@ exports.addRevenue = async (req, res) => {
 
 exports.getAllRevenue = async (req, res) => {
   try {
-    const revenues = await Revenue.find().sort({ date: -1 });
+    const { branch } = req.query;
+    const filter = branch ? { branch } : {};
+    const revenues = await Revenue.find(filter).sort({ date: -1 });
     res.json(revenues);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
+// Get revenue by date (with optional branch filter)
 exports.getRevenueByDate = async (req, res) => {
   try {
-    let { day, month, year } = req.query;
+    let { day, month, year, branch } = req.query;
     let query = {};
 
     if (day && month && year) {
@@ -45,17 +45,23 @@ exports.getRevenueByDate = async (req, res) => {
       query.date = { $gte: start, $lte: end };
     } else if (day) {
       query = {
-        ...query,
         $expr: { $eq: [{ $dayOfMonth: "$date" }, Number(day)] }
       };
     } else {
       return res.status(400).json({ message: 'Provide at least one of day, month, or year.' });
     }
 
-    const revenues = await Revenue.find(query).sort({ date: 1 }).select('date amount');
-    const totalRevenue = revenues.reduce((sum, rev) => sum + (rev.amount || 0), 0);
+    if (branch) {
+      query.branch = branch;
+    }
 
-    res.json({ revenues, totalRevenue });
+    const revenues = await Revenue.find(query)
+      .sort({ date: 1 })
+      .select('date amount comment branch');
+
+    const totalAmount = revenues.reduce((sum, rev) => sum + (rev.amount || 0), 0);
+
+    res.json({ revenues, totalAmount });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

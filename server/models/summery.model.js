@@ -10,7 +10,7 @@ const revenueSchema = new mongoose.Schema({
     required: true,
   },
   branch: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: String,
     ref: 'Branch',
   },
   comment: {

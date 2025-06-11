@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Table, Button, Popconfirm, Space, message } from 'antd';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import axiosInstance from '../api/axiosInstance';
+import type { Breakpoint } from 'antd/es/_util/responsiveObserver';
 
 type Expense = {
   _id?: string;
@@ -43,7 +44,7 @@ const ViewExpenses = ({
   // Internal delete handler (if onDelete not provided)
   const handleDelete = async (id?: string) => {
     if (!id) return;
-    if (!window.confirm('Delete this expense?')) return;
+    
     try {
       await axiosInstance.delete(`/expenses/${id}`);
       setExpenses(expenses.filter(e => e._id !== id));
@@ -61,7 +62,7 @@ const ViewExpenses = ({
       dataIndex: 'date',
       key: 'date',
       render: (date: string) => date?.slice(0, 10),
-      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'] as Breakpoint[],
     },
     {
       title: 'Amount',
@@ -69,19 +70,20 @@ const ViewExpenses = ({
       key: 'amount',
       render: (amount: number, record: Expense) =>
         amount ?? record.expenses ?? record.revenue ?? '-',
-      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'] as Breakpoint[],
     },
     {
       title: 'Reason',
       dataIndex: 'reason',
       key: 'reason',
-      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'] as Breakpoint[],
     },
     (onEdit || onDelete)
       ? {
           title: 'Actions',
           key: 'actions',
           align: 'center' as const,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           render: (_: any, record: Expense) => (
             <Space size="middle">
               {onEdit && (
@@ -107,7 +109,7 @@ const ViewExpenses = ({
               </Popconfirm>
             </Space>
           ),
-          responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
+          responsive: ['xs', 'sm', 'md', 'lg', 'xl'] as Breakpoint[],
         }
       : {},
   ].filter(Boolean);

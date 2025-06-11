@@ -8,7 +8,8 @@ function App() {
   const role = localStorage.getItem('role');
   const element = useRoutes(routes);
   const navigate = useNavigate();
-  const [selectedBranch, setSelectedBranch] = useState<string>(() => localStorage.getItem('selectedBranch') || branchOptions[0].value);
+  // Only use localStorage for initial value
+  const [selectedBranch, setSelectedBranch] = useState<string>(() => localStorage.getItem('selectedBranch') || '');
 
   const handleBranchChange = (value: string) => {
     setSelectedBranch(value);

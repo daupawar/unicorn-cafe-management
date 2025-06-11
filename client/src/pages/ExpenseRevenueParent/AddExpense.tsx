@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useRef } from 'react';
 import axiosInstance from '../../api/axiosInstance';
 import ViewExpenses from '../../components/ViewExpenses';
@@ -22,7 +23,7 @@ const { Title } = Typography;
 type Expense = {
   _id?: string;
   date: string;
-  amount: number;
+  amount?: number;
   reason?: string;
 };
 
@@ -56,16 +57,20 @@ const AddExpense = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const amountInputRef = useRef<Input | null>(null);
+  const amountInputRef = useRef<HTMLInputElement | null>(null);
 
-  const fetchExpenses = async () => {
+   const fetchExpenses = async () => {
     try {
-      const res = await axiosInstance.get('/expenses');
+      const branch = localStorage.getItem('selectedBranch') || '';
+      const res = await axiosInstance.get('/expenses', {
+        params: { branch }
+      });
       setExpenses(res.data);
     } catch {
       message.error('Failed to fetch expenses');
     }
   };
+
 
   useEffect(() => {
     fetchExpenses();
@@ -86,9 +91,12 @@ const AddExpense = () => {
   const handleFinish = async (values: any) => {
     setLoading(true);
     try {
+        const branch = localStorage.getItem('selectedBranch') || '';
       const payload = {
         ...values,
         date: values.date ? values.date.format('YYYY-MM-DD') : '',
+        amount: Number(values.amount),
+        branch, // Pass branch from localStorage
       };
       if (editingId) {
         await axiosInstance.put(`/expenses/${editingId}`, payload);
@@ -120,7 +128,7 @@ const AddExpense = () => {
 
   const handleDelete = async (id?: string) => {
     if (!id) return;
-    if (!window.confirm('Delete this expense?')) return;
+    
     try {
       await axiosInstance.delete(`/expenses/${id}`);
       fetchExpenses();
@@ -153,11 +161,11 @@ const AddExpense = () => {
   };
 
   return (
-    <div style={{ maxWidth: 1200, margin: '40px auto', width: '100%', paddingBottom: 90 }}>
+    <div style={{ maxWidth: 1200, margin: '10px auto', width: '100%', paddingBottom: 20 }}>
       <Row gutter={[24, 24]}>
         <Col xs={24} md={10}>
           <Card>
-            <Title level={5} style={{ marginBottom: 16 }}>
+            <Title level={5} style={{ marginBottom: 15, marginTop: 10 }}>
               {editingId ? 'Edit Expense' : 'Add Expense'}
             </Title>
             <Form
@@ -184,7 +192,11 @@ const AddExpense = () => {
                 <Input
                   type="number"
                   placeholder="Amount"
-                  ref={amountInputRef}
+                  ref={input => {
+                    if (input) {
+                      amountInputRef.current = input.input;
+                    }
+                  }}
                 />
               </Form.Item>
               <Form.Item
@@ -243,7 +255,7 @@ const AddExpense = () => {
         </Col>
         <Col xs={24} md={14}>
           <Card>
-            <Title level={5} style={{ marginBottom: 16 }}>Expenses List</Title>
+            <Title level={5} style={{ marginBottom: 15 ,marginTop:10 }}>Expenses List</Title>
             <ViewExpenses
               expenses={expenses}
               onEdit={handleEdit}

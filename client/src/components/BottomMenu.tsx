@@ -2,7 +2,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Menu, Grid } from 'antd';
 import {
   HomeOutlined,
-  AppstoreOutlined,
   UserOutlined,
   DollarOutlined,
   BranchesOutlined,
@@ -53,12 +52,12 @@ const BottomMenu = () => {
       : []),
     ...(role === 'admin' || role === 'manager'
       ? [
-          {
-            key: '/branch-list',
-            icon: menuLabel(<AppstoreOutlined style={{ fontSize: isMobile ? 18 : 20 }} />, 'branch list'),
-            label: '',
-            onClick: () => navigate('/branch-list'),
-          },
+          // {
+          //   key: '/branch-list',
+          //   icon: menuLabel(<AppstoreOutlined style={{ fontSize: isMobile ? 18 : 20 }} />, 'branch list'),
+          //   label: '',
+          //   onClick: () => navigate('/branch-list'),
+          // },
           {
             key: '/manage-expense-revenue',
             icon: menuLabel(<DollarOutlined style={{ fontSize: isMobile ? 18 : 20 }} />, 'expenses'),

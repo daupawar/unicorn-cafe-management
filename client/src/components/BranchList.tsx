@@ -1,5 +1,6 @@
 import { Table, Button, Space, Popconfirm } from 'antd';
 import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import type { Breakpoint } from 'antd/es/_util/responsiveObserver';
 
 type Branch = {
   _id?: string;
@@ -27,49 +28,49 @@ const BranchList = ({
       dataIndex: 'name',
       key: 'name',
       ellipsis: true,
-      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'] as Breakpoint[],
     },
     {
       title: 'Location',
       dataIndex: 'location',
       key: 'location',
       ellipsis: true,
-      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'] as Breakpoint[],
     },
     {
       title: 'Owner',
       dataIndex: 'owner',
       key: 'owner',
       ellipsis: true,
-      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'] as Breakpoint[],
     },
     {
       title: 'Address',
       dataIndex: 'address',
       key: 'address',
       ellipsis: true,
-      responsive: ['md', 'lg', 'xl'],
+      responsive: ['md', 'lg', 'xl'] as Breakpoint[],
     },
     {
       title: 'Opening Date',
       dataIndex: 'openingDate',
       key: 'openingDate',
       render: (date: string) => date?.slice(0, 10),
-      responsive: ['sm', 'md', 'lg', 'xl'],
+      responsive: ['sm', 'md', 'lg', 'xl'] as Breakpoint[],
     },
     {
       title: 'Active',
       dataIndex: 'isActive',
       key: 'isActive',
       render: (active: boolean) => (active ? 'Yes' : 'No'),
-      responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
+      responsive: ['xs', 'sm', 'md', 'lg', 'xl'] as Breakpoint[],
     },
     {
       title: 'Comment',
       dataIndex: 'comment',
       key: 'comment',
       ellipsis: true,
-      responsive: ['md', 'lg', 'xl'],
+      responsive: ['md', 'lg', 'xl'] as Breakpoint[],
     },
     (onEdit || onDelete)
       ? {
@@ -101,7 +102,7 @@ const BranchList = ({
               )}
             </Space>
           ),
-          responsive: ['xs', 'sm', 'md', 'lg', 'xl'],
+          responsive: ['xs', 'sm', 'md', 'lg', 'xl'] as Breakpoint[],
         }
       : {},
   ].filter(Boolean);

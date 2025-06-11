@@ -20,7 +20,7 @@ const ExpenseRevenueParent = () => {
   ];
 
   return (
-    <div style={{ maxWidth: 1200, margin: '40px auto', width: '100%', paddingBottom:90 }}>
+    <div style={{ maxWidth: 1200, margin: '10px auto', width: '100%', paddingBottom:20 }}>
       <Card>
         <Tabs
           activeKey={activeTab}

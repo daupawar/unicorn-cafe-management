@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom'; 
 import {
@@ -126,6 +128,8 @@ const Dashboard = () => {
           params.month = selectedMonth;
           params.year = selectedYear;
         }
+        // Always pass selectedBranch from localStorage
+        params.branch = localStorage.getItem('selectedBranch') || selectedBranch;
 
         // Expenses by date
         const expRes = await axiosInstance.get('/expenses/by-date', { params });
@@ -148,7 +152,7 @@ const Dashboard = () => {
             date: rev.date,
           }))
         );
-        setTotalRevenue(revRes.data.totalRevenue || revList.reduce((sum: number, rev: any) => sum + (rev.amount || 0), 0));
+        setTotalRevenue(revRes.data.totalAmount || revList.reduce((sum: number, rev: any) => sum + (rev.amount || 0), 0));
       } catch {
         setExpenses([]);
         setRevenues([]);
@@ -157,7 +161,7 @@ const Dashboard = () => {
       }
     };
     fetchData();
-  }, [selectedDate, selectedMonth, selectedYear, mode]);
+  }, [selectedDate, selectedMonth, selectedYear, mode, selectedBranch]);
 
   // Dummy: Set active branches (replace with API if needed)
   useEffect(() => {
@@ -176,11 +180,11 @@ const Dashboard = () => {
       <div
         style={{
           margin: '0 auto',
-          padding: '0 16px'
+          padding: '0 10px'
         }}
       >
         <Row align="middle" justify="space-between" gutter={8} style={{ marginBottom: 0 }}>
-           
+         
         </Row>
 
         <Row gutter={[12, 12]}>
