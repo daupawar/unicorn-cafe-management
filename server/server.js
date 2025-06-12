@@ -6,10 +6,11 @@ require('dotenv').config();
 
 const app = express();
 app.use(cors());
-app.use(express.json()); 
+app.use(express.json());
 
 const allowedOrigins = [
-  'https://unicorn-cafe-management.vercel.app/', // your frontend domain
+  'https://unicorn-cafe-management.vercel.app/',
+  'http://localhost:5000/'
 ];
 
 app.use(cors({
@@ -26,7 +27,7 @@ app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api/users', require('./routes/user.routes')); // <-- Add this line
 app.use('/api/expenses', require('./routes/expense.routes'));
 app.use('/api/branches', require('./routes/branch.routes'));
- 
+
 const revenueRoutes = require('./routes/revenue.routes');
 app.use('/api/revenue', revenueRoutes);
 app.use('/api/stats', require('./routes/user.routes'));
