@@ -13,6 +13,7 @@ const allowedOrigins = [
   'http://localhost:5000/'
 ];
 
+
 app.use(cors({
   origin: allowedOrigins,
   credentials: true, // if you use cookies or authentication
